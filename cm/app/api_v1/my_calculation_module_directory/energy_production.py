@@ -16,6 +16,8 @@ path = os.path.dirname(os.path.dirname
 path = os.path.join(path, 'app', 'api_v1')
 if path not in sys.path:
         sys.path.append(path)
+
+import my_calculation_module_directory.plants as plants
 from my_calculation_module_directory.visualization import quantile_colors
 from my_calculation_module_directory.utils import best_unit, xy2latlong
 from my_calculation_module_directory.time_profiles import pv_profile
@@ -39,6 +41,7 @@ def get_plants(plant, target, speed,
     # compute the raster with the number of plant per pixel
     n_plant_raster = (available_area / plant.area *
                       reduction_factor / 100)
+    import ipdb; ipdb.set_trace()
     n_plant_raster = n_plant_raster.astype(int)
     most_suitable = raster_suitable(n_plant_raster,
                                     tot_en_gen_per_year,
@@ -154,26 +157,28 @@ def constraints(target, speed, available_area, plant_px,
     plant.energy_production = plant.compute_energy(speed_mean)
     n_plants = int(reduction_factor * pixel_sum * plant_px)
     energy_available = (n_plants * plant.energy_production)
+    import ipdb; ipdb.set_trace()
 
     if target == 0:
         target = energy_available
-    rules = plant.Planning_rules(reduction_factor*available_area.sum(),
-                                 target, available_area.sum(),
-                                 energy_available)
+    rules = plants.Planning_rules(reduction_factor*available_area.sum(),
+                                  target, available_area.sum(),
+                                  energy_available)
     n_plants = rules.n_plants(plant)
     return n_plants, plant
 
 
 def raster_suitable(n_plant_raster, tot_en_gen_per_year,
-                    irradiation_values, pv_plant):
+                    speed_values, plant):
     """ Define the most suitable roofs,
     by computing the energy for each pixel by considering a number of plants
     for each pixel and selected
     most suitable pixel to cover the enrgy production
     """
     # TODO: do not consider 0 values in the computation
-    en_values = (irradiation_values * pv_plant.peak_power *
-                 pv_plant.efficiency * n_plant_raster)
+    import ipdb; ipdb.set_trace()
+    en_values = (0.5 * 0.41 * 1.225 * plant.swept_area *
+                 speed_values**3 * 8760 * n_plant_raster)
     # order the matrix
     ind = np.unravel_index(np.argsort(en_values, axis=None)[::-1],
                            en_values.shape)

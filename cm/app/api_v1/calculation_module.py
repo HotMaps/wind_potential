@@ -4,7 +4,7 @@ from osgeo import gdal
 import numpy as np
 import pandas as pd
 import warnings
-from collections import defaultdict
+import skimage.transform as st 
 
 # TODO:  change with try and better define the path
 path = os.path.dirname(os.path.dirname
@@ -17,11 +17,6 @@ from my_calculation_module_directory.visualization import line, reducelabels
 from ..helper import generate_output_file_tif
 from my_calculation_module_directory.utils import best_unit
 import my_calculation_module_directory.plants as plant
-
-
-set_turbine = [{'name': 'Enercon E48 800',
-                'height': 50,
-                'area': 1810}, ]
 
 
 def get_integral_error(pl, interval):
@@ -118,13 +113,38 @@ def calculation(output_directory, inputs_raster_selection,
     output_suitable = generate_output_file_tif(output_directory)
 
     # retrieve the inputs layes
+    ds = gdal.Open(inputs_raster_selection["wind_50m"])
+    available_area = np.nan_to_num(ds.ReadAsArray())
+
+    # create an empty array to fill in with speed values
+    new_speed = available_area * np.nan
+
+    ds_geo = ds.GetGeoTransform()
+    pixel_area = ds_geo[1] * (-ds_geo[5])
+    available_area = ds.ReadAsArray()
+    available_area = np.nan_to_num(available_area)
+    available_area[available_area > 0] = pixel_area
+
+    # FIXME: the speed is considered with the same resolution
+    # and extent of available area
+    # by default available area has higher resolution
+    # however with user layers can be the opposite
     ds = gdal.Open(inputs_raster_selection["climate_wind_speed"])
     speed = ds.ReadAsArray()
     speed = np.nan_to_num(speed)
+    ds_speed = ds.GetGeoTransform()
+    # resize shape
+    import ipdb; ipdb.set_trace()
+    new_rr_shape = (speed.shape[0]/ds_geo[5],
+                    speed.shape[1]/ds_geo[1])
+    speed = st.resize(speed, new_rr_shape, mode='constant')
 
-    # retrieve the inputs layes
-    ds = gdal.Open(inputs_raster_selection["wind_50m"])
-    available_area = np.nan_to_num(ds.ReadAsArray())
+    # allignement
+    ncols_offset = (ds_geo[0] - ds_speed[0]) / ds_geo[1]
+    nrows_offset = (ds_geo[3] - ds_speed[3]) / ds_geo[5]
+
+    new_speed[nrows_offset:nrows_offset+speed.shape[1],
+              ncols_offset:ncols_offset+speed.shape[0]] = speed
 
     # retrieve the inputs all input defined in the signature
     w_in = {'res_hub':
@@ -137,6 +157,8 @@ def calculation(output_directory, inputs_raster_selection,
             'financing_years': int(inputs_parameter_selection['financing_years']),
             'efficiency': float(inputs_parameter_selection['efficiency']),
             'height': float(inputs_parameter_selection['height']),
+            'swp_area': float(inputs_parameter_selection['swept_area']),
+            'peak_power': float(inputs_parameter_selection['peak_power'])
             }
 
     reduction_factor = float(inputs_parameter_selection["reduction_factor"])
@@ -145,10 +167,10 @@ def calculation(output_directory, inputs_raster_selection,
     # TODO: set peak power and swept area from a list of turbine
     # define a pv plant with input features
     wind_plant = plant.Wind_plant('Wind',
-                                  peak_power=800,
+                                  peak_power=w_in['peak_power'],
                                   efficiency=w_in['efficiency']
                                   )
-    wind_plant.swept_area = 1810
+    wind_plant.swept_area = w_in['swp_area']
     wind_plant.area = w_in["res_hub"]*w_in["res_hub"]
     # add information to get the time profile
     ds_geo = ds.GetGeoTransform()

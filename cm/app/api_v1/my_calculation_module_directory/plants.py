@@ -198,6 +198,6 @@ class Wind_plant(Plant):
     def compute_energy(self, speed, rho=1.225):
         """Calculate the energy production on the base of the mean
            velocity"""
-        e_p = (0.5 * self.cp * self.rho * self.swept_area *
-               self.mean_velocity**3) * 8760
+        e_p = (0.5 * self.cp * rho * self.swept_area *
+               speed**3) * 8760
         return e_p
