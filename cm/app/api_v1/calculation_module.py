@@ -15,7 +15,7 @@ if path not in sys.path:
 from my_calculation_module_directory.energy_production import get_plants, get_profile, get_raster, get_indicators
 from my_calculation_module_directory.visualization import line, reducelabels
 from ..helper import generate_output_file_tif
-from my_calculation_module_directory.utils import best_unit
+from my_calculation_module_directory.utils import best_unit, raster_resize
 import my_calculation_module_directory.plants as plant
 
 
@@ -114,37 +114,15 @@ def calculation(output_directory, inputs_raster_selection,
 
     # retrieve the inputs layes
     ds = gdal.Open(inputs_raster_selection["wind_50m"])
-    available_area = np.nan_to_num(ds.ReadAsArray())
-
-    # create an empty array to fill in with speed values
-    new_speed = available_area * np.nan
-
     ds_geo = ds.GetGeoTransform()
     pixel_area = ds_geo[1] * (-ds_geo[5])
     available_area = ds.ReadAsArray()
     available_area = np.nan_to_num(available_area)
     available_area[available_area > 0] = pixel_area
 
-    # FIXME: the speed is considered with the same resolution
-    # and extent of available area
-    # by default available area has higher resolution
     # however with user layers can be the opposite
-    ds = gdal.Open(inputs_raster_selection["climate_wind_speed"])
-    speed = ds.ReadAsArray()
-    speed = np.nan_to_num(speed)
-    ds_speed = ds.GetGeoTransform()
-    # resize shape
-    import ipdb; ipdb.set_trace()
-    new_rr_shape = (speed.shape[0]/ds_geo[5],
-                    speed.shape[1]/ds_geo[1])
-    speed = st.resize(speed, new_rr_shape, mode='constant')
-
-    # allignement
-    ncols_offset = (ds_geo[0] - ds_speed[0]) / ds_geo[1]
-    nrows_offset = (ds_geo[3] - ds_speed[3]) / ds_geo[5]
-
-    new_speed[nrows_offset:nrows_offset+speed.shape[1],
-              ncols_offset:ncols_offset+speed.shape[0]] = speed
+    ds2 = gdal.Open(inputs_raster_selection["climate_wind_speed"])
+    speed = raster_resize(ds2, ds)
 
     # retrieve the inputs all input defined in the signature
     w_in = {'res_hub':

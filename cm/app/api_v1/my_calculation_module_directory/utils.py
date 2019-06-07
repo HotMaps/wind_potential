@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from osgeo import osr
 from pint import UnitRegistry
+import skimage.transform as st
 
 ureg = UnitRegistry()
 
@@ -214,6 +215,50 @@ def diff_raster(raster_in, raster_out):
     diff = np.nansum(raster_in) - np.nansum(raster_in[raster_out > 0])
     error = diff/np.nansum(raster_in)
     return error
+
+
+def raster_resize(ras1, ras2):
+    """
+    Adapt the resoltution and the extent of raster1 to raster2
+
+    :param raster1: gdal object
+    :param raster2: gdal object
+
+    :returns a new_matrix with array1 values and array2
+    dimension and resolution
+    """
+    matrix1 = np.nan_to_num(ras1.ReadAsArray())
+    matrix2 = ras2.ReadAsArray()
+    matrix2 = np.nan_to_num(matrix2)
+    ds_1 = ras1.GetGeoTransform()
+    ds_2 = ras2.GetGeoTransform()
+    x_offset = int((ds_2[0] - ds_1[0]) / ds_2[1])
+    y_offset = int((ds_2[3] - ds_1[3]) / (-ds_2[5]))
+    x_incr = ds_1[1]/ds_2[1]
+    y_incr = ds_1[5]/ds_2[5]
+    # ds_2 = ras2.GetGeoTransform()
+    # resize shape
+    new_matrix = np.empty(matrix2.shape)
+    for y in range(0, matrix1.shape[0]):
+        i = max(0, int(y * y_incr) + y_offset)
+        i_incr = min(i + int(y_incr), new_matrix.shape[0])
+        for x in range(0, matrix1.shape[1]):
+            j = max(0, int(x * x_incr) - x_offset)
+            j_incr = min(j + int(x_incr), new_matrix.shape[1])
+            print(i, j)
+            new_matrix[i:i_incr, j:j_incr] = matrix1[y, x]
+    return new_matrix
+
+    # allignement
+#    ncols_offset = (ds_1[0] - ds_2[0]) / ds_1[1]
+#    nrows_offset = (ds_1[3] - ds_2[3]) / ds_1[5]
+#
+#    new_speed[nrows_offset:nrows_offset+speed.shape[1],
+#              ncols_offset:ncols_offset+speed.shape[0]] = speed
+
+    # FIXME: the speed is considered with the same resolution
+    # and extent of available area
+    # by default available area has higher resolution
 
 
 if __name__ == "__main__":
