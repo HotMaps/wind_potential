@@ -55,7 +55,7 @@ INPUTS_CALCULATION_MODULE = [
      'input_type': 'input',
      'input_priority': 0,
      'input_parameter_name': 'res_hub',
-     'input_value': 300,
+     'input_value': 500,
      'input_unit': ' ',
      'input_min': 0,
      'input_max': 5000,
