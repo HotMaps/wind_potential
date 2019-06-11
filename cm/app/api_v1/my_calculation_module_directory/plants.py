@@ -77,8 +77,8 @@ class Financial:
         :returns: the levelized cost of energy [currency/kWh]
 
         test: geothermal savings oil
-        >>> feasability = Feasability(7473340, 4918, 27)
-        >>> lcoe(6962999, 0.03)
+        >>> feasability = Financial(7473340, 4918, 27)
+        >>> feasability.lcoe(6962999, 0.03)
         0.05926970484809364
 
         test: geothermal savings gas
@@ -183,9 +183,6 @@ class Wind_plant(Plant):
         The class describes a wind plant providing
         methods to compute different indicators. Additional parameters to
         Plant class
-
-        :param area: Swept area [m^{2}]
-        :
     """
     def __init__(self, swept_area, cp=0.41, **kwargs):
         """Initialize the base and height attributes."""
@@ -195,9 +192,25 @@ class Wind_plant(Plant):
         for k in kwargs.keys():
             self.__setattr__(k, kwargs[k])
 
-    def compute_energy(self, speed, rho=1.225):
+    def compute_energy(self, speed, rho=1.225, working_hours=1700,
+                       conv=1/1000):
         """Calculate the energy production on the base of the mean
-           velocity"""
+           velocity
+
+        :param speed: wind mean velocity [m/s]
+        :param rho: air density [kg/m3]
+        :param conv: conversion from J to kWh
+
+        return the energy production in kWh
+        >>> plant = Wind_plant(id_plant="test", swept_area=8495)
+        >>> plant.compute_energy(speed=12)
+        6266802.276000001
+        """
         e_p = (0.5 * self.cp * rho * self.swept_area *
-               speed**3) * 8760
+               speed**3) * working_hours * conv
         return e_p
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
