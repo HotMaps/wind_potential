@@ -41,13 +41,13 @@ def get_plants(plant, target, speed,
     # compute the raster with the number of plant per pixel
     n_plant_raster = (available_area / plant.area *
                       reduction_factor / 100)
-    import ipdb; ipdb.set_trace()
-    n_plant_raster = n_plant_raster.astype(int)
+    # n_plant_raster = n_plant_raster.astype(int)
     most_suitable = raster_suitable(n_plant_raster,
                                     tot_en_gen_per_year,
                                     speed,
                                     plant)
     n_plant_raster[most_suitable <= 0] = 0
+    import ipdb; ipdb.set_trace()
     return n_plant_raster, most_suitable, plant
 
 
@@ -157,7 +157,6 @@ def constraints(target, speed, available_area, plant_px,
     plant.energy_production = plant.compute_energy(speed_mean)
     n_plants = int(reduction_factor * pixel_sum * plant_px)
     energy_available = (n_plants * plant.energy_production)
-    import ipdb; ipdb.set_trace()
 
     if target == 0:
         target = energy_available
@@ -176,7 +175,6 @@ def raster_suitable(n_plant_raster, tot_en_gen_per_year,
     most suitable pixel to cover the enrgy production
     """
     # TODO: do not consider 0 values in the computation
-    import ipdb; ipdb.set_trace()
     en_values = (0.5 * 0.41 * 1.225 * plant.swept_area *
                  speed_values**3 * 8760 * n_plant_raster)
     # order the matrix
