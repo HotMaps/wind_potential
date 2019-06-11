@@ -33,6 +33,7 @@ def get_integral_error(pl, interval):
                  pl.profile.sum() * interval) /
                 (pl.energy_production * pl.n_plants)) * 100
     if error[0] > 5:
+        import ipdb; ipdb.set_trace()
         message = """Difference between raster value sum and {}
                       total energy greater than {}%""".format(pl.id,
                                                               int(error))
@@ -109,20 +110,6 @@ def calculation(output_directory, inputs_raster_selection,
     # list of error messages
     # TODO: to be fixed according to CREM format
     messages = []
-    # generate the output raster file
-    output_suitable = generate_output_file_tif(output_directory)
-
-    # retrieve the inputs layes
-    ds = gdal.Open(inputs_raster_selection["wind_50m"])
-    ds_geo = ds.GetGeoTransform()
-    pixel_area = ds_geo[1] * (-ds_geo[5])
-    available_area = ds.ReadAsArray()
-    available_area = np.nan_to_num(available_area)
-    available_area[available_area > 0] = pixel_area
-
-    # however with user layers can be the opposite
-    ds2 = gdal.Open(inputs_raster_selection["climate_wind_speed"])
-    speed = raster_resize(ds2, ds)
 
     # retrieve the inputs all input defined in the signature
     w_in = {'res_hub':
@@ -141,6 +128,24 @@ def calculation(output_directory, inputs_raster_selection,
 
     reduction_factor = float(inputs_parameter_selection["reduction_factor"])
     discount_rate = float(inputs_parameter_selection['discount_rate'])
+    # generate the output raster file
+    output_suitable = generate_output_file_tif(output_directory)
+
+    # retrieve the inputs layes
+    # ds = gdal.Open(inputs_raster_selection["wind_50m"])
+    ds = gdal.Warp('warp_test.tif', inputs_raster_selection["wind_50m"],
+                   outputType=gdal.GDT_Float32,
+                   xRes=w_in['res_hub'], yRes=w_in['res_hub'],
+                   dstNodata=-9999)
+    ds_geo = ds.GetGeoTransform()
+    pixel_area = ds_geo[1] * (-ds_geo[5])
+    available_area = ds.ReadAsArray()
+    available_area = np.nan_to_num(available_area)
+    available_area[available_area > 0] = pixel_area
+
+    # however with user layers can be the opposite
+    ds2 = gdal.Open(inputs_raster_selection["climate_wind_speed"])
+    speed = raster_resize(ds2, ds)
 
     # TODO: set peak power and swept area from a list of turbine
     # define a pv plant with input features
@@ -163,6 +168,7 @@ def calculation(output_directory, inputs_raster_selection,
                                                          plant_px)
     wind_plant.n_plants = plant_raster.sum()
     if wind_plant.n_plants > 0:
+        wind_plant.id = "wind"
         wind_plant.raw = False
         wind_plant.mean = None
         wind_plant.profile = get_profile(speed, ds,
