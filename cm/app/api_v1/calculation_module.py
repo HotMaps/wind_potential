@@ -39,6 +39,7 @@ def get_integral_error(pl, interval):
                                                               int(error))
         warnings.warn(message)
         return message
+    return
 
 
 def run_source(kind, pl, data_in,
@@ -46,7 +47,6 @@ def run_source(kind, pl, data_in,
                n_plant_raster,
                irradiation_values,
                building_footprint,
-               reduction_factor,
                output_suitable,
                discount_rate,
                ds):
@@ -60,8 +60,6 @@ def run_source(kind, pl, data_in,
 
     result = dict()
     if most_suitable.max() > 0:
-        result['raster_layers'] = get_raster(most_suitable, output_suitable,
-                                             ds)
         result['indicator'] = get_indicators(kind, pl, most_suitable,
                                              n_plant_raster, discount_rate)
 
@@ -114,19 +112,16 @@ def calculation(output_directory, inputs_raster_selection,
     # retrieve the inputs all input defined in the signature
     w_in = {'res_hub':
             float(inputs_parameter_selection["res_hub"]),
-            'target': float(inputs_parameter_selection["target"]),
+            'height':
+            float(inputs_parameter_selection["height"]),
             'setup_costs': int(inputs_parameter_selection['setup_costs']),
             'tot_cost_year':
             (float(inputs_parameter_selection['maintenance_percentage']) /
              100 * int(inputs_parameter_selection['setup_costs'])),
             'financing_years': int(inputs_parameter_selection['financing_years']),
-            'efficiency': float(inputs_parameter_selection['efficiency']),
-            'height': float(inputs_parameter_selection['height']),
-            'swp_area': float(inputs_parameter_selection['swept_area']),
             'peak_power': float(inputs_parameter_selection['peak_power'])
             }
 
-    reduction_factor = float(inputs_parameter_selection["reduction_factor"])
     discount_rate = float(inputs_parameter_selection['discount_rate'])
     # generate the output raster file
     output_suitable = generate_output_file_tif(output_directory)
@@ -136,50 +131,34 @@ def calculation(output_directory, inputs_raster_selection,
     ds = gdal.Warp('warp_test.tif', inputs_raster_selection["wind_50m"],
                    outputType=gdal.GDT_Float32,
                    xRes=w_in['res_hub'], yRes=w_in['res_hub'],
-                   dstNodata=-9999)
-    ds_geo = ds.GetGeoTransform()
-    pixel_area = ds_geo[1] * (-ds_geo[5])
-    available_area = ds.ReadAsArray()
-    available_area = np.nan_to_num(available_area)
-    available_area[available_area > 0] = pixel_area
-
-    # however with user layers can be the opposite
-    ds2 = gdal.Open(inputs_raster_selection["climate_wind_speed"])
-    speed = raster_resize(ds2, ds)
-
-    # TODO: set peak power and swept area from a list of turbine
-    # define a pv plant with input features
+                   dstNodata=0)
+    plant_raster = ds.ReadAsArray()
+    potential = ds.ReadAsArray()
+    potential = np.nan_to_num(potential)
+    plant_raster = np.nan_to_num(plant_raster)
+    plant_raster[plant_raster > 0] = 1
+    # TODO: set peak power and swept area from a list of turbines
     wind_plant = plant.Wind_plant('Wind',
-                                  peak_power=w_in['peak_power'],
-                                  efficiency=w_in['efficiency']
+                                  peak_power=w_in['peak_power']
                                   )
-    wind_plant.swept_area = w_in['swp_area']
     wind_plant.area = w_in["res_hub"]*w_in["res_hub"]
-    # add information to get the time profile
-    ds_geo = ds.GetGeoTransform()
-    wind_pixel_area = ds_geo[1] * (-ds_geo[5])
-    plant_px = wind_pixel_area/(w_in['res_hub']**2)
+    wind_plant.height = w_in["height"]
 
-    plant_raster, most_suitable, wind_plant = get_plants(wind_plant,
-                                                         w_in['target'],
-                                                         speed,
-                                                         available_area,
-                                                         reduction_factor,
-                                                         plant_px)
     wind_plant.n_plants = plant_raster.sum()
     if wind_plant.n_plants > 0:
-        wind_plant.id = "wind"
+        wind_plant.id = "Wind"
         wind_plant.raw = False
         wind_plant.mean = None
-        wind_plant.profile = get_profile(speed, ds,
-                                         most_suitable, plant_raster,
+        wind_plant.profile = get_profile(potential, ds,
+                                         potential, plant_raster,
                                          wind_plant)
-        messages.append(get_integral_error(wind_plant, 1))
+        wind_plant.energy_production = (wind_plant.profile.sum()[0]
+                                        / wind_plant.n_plants)
         wind_plant.resolution = ['Hours', 'hourly']
-        res = run_source('wind', wind_plant, w_in, most_suitable,
+        res = run_source('Wind', wind_plant, w_in, plant_raster,
                          plant_raster,
-                         speed, available_area,
-                         reduction_factor, output_suitable, discount_rate,
+                         potential, plant_raster,
+                         output_suitable, discount_rate,
                          ds)
     else:
         # TODO: How to manage message

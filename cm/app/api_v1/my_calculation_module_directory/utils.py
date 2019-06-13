@@ -188,13 +188,13 @@ def production_per_plant(json, kind='PV'):
 
     :returns: the vale
     """
+    import ipdb; ipdb.set_trace()
     value, unit = search(json['result']['indicator'],
                          '{} total energy production'.format(kind))
     energy = ureg.Quantity(value, unit)
     n_plants, unit = search(json['result']['indicator'],
                             'Number of installed {} Systems'.format(kind))
     e_plant = energy/n_plants
-    e_plant.ito(ureg.kilowatt_hour / ureg.day)
     return e_plant
 
 
@@ -238,7 +238,7 @@ def raster_resize(ras1, ras2):
     y_incr = ds_1[5]/ds_2[5]
     # ds_2 = ras2.GetGeoTransform()
     # resize shape
-    new_matrix = np.empty(matrix2.shape)
+    new_matrix = np.zeros(matrix2.shape)
     for y in range(0, matrix1.shape[0]):
         i = max(0, int(y * y_incr) + y_offset)
         i_incr = min(i + int(y_incr), new_matrix.shape[0])

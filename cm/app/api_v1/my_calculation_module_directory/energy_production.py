@@ -20,7 +20,7 @@ if path not in sys.path:
 import my_calculation_module_directory.plants as plants
 from my_calculation_module_directory.visualization import quantile_colors
 from my_calculation_module_directory.utils import best_unit, xy2latlong
-from my_calculation_module_directory.time_profiles import pv_profile
+from my_calculation_module_directory.time_profiles import wind_profile
 
 
 def get_plants(plant, target, speed,
@@ -47,7 +47,6 @@ def get_plants(plant, target, speed,
                                     speed,
                                     plant)
     n_plant_raster[most_suitable <= 0] = 0
-    import ipdb; ipdb.set_trace()
     return n_plant_raster, most_suitable, plant
 
 
@@ -57,14 +56,7 @@ def get_indicators(kind, plant, most_suitable,
     Return a dictionary with main indicator of the specific source
     """
     n_plants = n_plant_raster.sum()
-    plant.energy_production = (most_suitable.sum() / n_plants)
     tot_en_gen_per_year = plant.energy_production * n_plants
-    error = abs(tot_en_gen_per_year -
-                most_suitable.sum())/(tot_en_gen_per_year)
-    if abs(error) > 0.01:
-        warnings.warn("""Difference between raster value sum and
-                      total energy greater than {}%""".format(int(error)))
-
     tot_en_gen, unit, factor = best_unit(tot_en_gen_per_year,
                                          current_unit='kWh/year',
                                          no_data=0,
@@ -118,7 +110,7 @@ def get_raster(most_suitable, output_suitable, ds):
 def get_profile(irradiation_values, ds,
                 most_suitable, n_plant_raster, plant):
     """
-    Return the time profile of the source energy production
+    Return the time profile of the total energy production
     """
     bins = 3
     e_bins = np.histogram(irradiation_values[most_suitable > 0], bins=bins)
@@ -138,12 +130,10 @@ def get_profile(irradiation_values, ds,
     long, lat = xy2latlong(x, y, ds)
     # generation of the output time profile
     n_plants = n_plant_raster.sum()
-    capacity = plant.peak_power * n_plants
-    system_loss = 100 * (1-plant.efficiency)
-    df_profile = pv_profile(lat, long,
-                            capacity,
-                            system_loss, plant.raw, plant.mean)
-    return df_profile
+    df_profile = wind_profile(lat, long,
+                              plant.height, plant.peak_power,
+                              plant.raw, plant.mean)
+    return df_profile * n_plants
 
 
 def constraints(target, speed, available_area, plant_px,
@@ -176,7 +166,7 @@ def raster_suitable(n_plant_raster, tot_en_gen_per_year,
     """
     # TODO: do not consider 0 values in the computation
     en_values = (0.5 * 0.41 * 1.225 * plant.swept_area *
-                 speed_values**3 * 8760 * n_plant_raster)
+                 speed_values**3 * 1700 * n_plant_raster)
     # order the matrix
     ind = np.unravel_index(np.argsort(en_values, axis=None)[::-1],
                            en_values.shape)

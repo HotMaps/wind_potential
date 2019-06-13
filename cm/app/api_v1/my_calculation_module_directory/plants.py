@@ -44,8 +44,8 @@ class Planning_rules:
         """
         Verify the consistency between constraints
         """
-        consistency = ((self.area_target < self.area_available) *
-                       (self.energy_target < self.energy_available))
+        consistency = ((self.area_target <= self.area_available) *
+                       (self.energy_target <= self.energy_available))
         return consistency
 
 
@@ -184,10 +184,9 @@ class Wind_plant(Plant):
         methods to compute different indicators. Additional parameters to
         Plant class
     """
-    def __init__(self, swept_area, cp=0.41, **kwargs):
+    def __init__(self, swept_area, **kwargs):
         """Initialize the base and height attributes."""
         self.swept_area = swept_area
-        self.cp = cp
         # TODO: acceptable list of attributes
         for k in kwargs.keys():
             self.__setattr__(k, kwargs[k])
@@ -199,14 +198,16 @@ class Wind_plant(Plant):
 
         :param speed: wind mean velocity [m/s]
         :param rho: air density [kg/m3]
-        :param conv: conversion from J to kWh
+        :param conv: conversion from Wh to kWh
 
-        return the energy production in kWh
+        return the energy production according to the conversion factor,
+        (default unit) kWh
+
         >>> plant = Wind_plant(id_plant="test", swept_area=8495)
         >>> plant.compute_energy(speed=12)
         6266802.276000001
         """
-        e_p = (0.5 * self.cp * rho * self.swept_area *
+        e_p = (0.5 * self.efficiency * rho * self.swept_area *
                speed**3) * working_hours * conv
         return e_p
 
