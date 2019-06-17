@@ -4,7 +4,8 @@ from osgeo import gdal
 import numpy as np
 import pandas as pd
 import warnings
-import skimage.transform as st 
+import reslib.wind as wind
+import reslib.plant as plant
 
 # TODO:  change with try and better define the path
 path = os.path.dirname(os.path.dirname
@@ -12,11 +13,11 @@ path = os.path.dirname(os.path.dirname
 path = os.path.join(path, 'app', 'api_v1')
 if path not in sys.path:
         sys.path.append(path)
-from my_calculation_module_directory.energy_production import get_plants, get_profile, get_raster, get_indicators
+from my_calculation_module_directory.energy_production import get_plants, get_lat_long, get_raster, get_indicators
 from my_calculation_module_directory.visualization import line, reducelabels
 from ..helper import generate_output_file_tif
 from my_calculation_module_directory.utils import best_unit, raster_resize
-import my_calculation_module_directory.plants as plant
+
 
 
 def get_integral_error(pl, interval):
@@ -47,7 +48,6 @@ def run_source(kind, pl, data_in,
                n_plant_raster,
                irradiation_values,
                building_footprint,
-               output_suitable,
                discount_rate,
                ds):
     """
@@ -64,13 +64,13 @@ def run_source(kind, pl, data_in,
                                              n_plant_raster, discount_rate)
 
         # default profile
-
-        default_profile, unit, con = best_unit(pl.profile['output'].values,
+        tot_profile = pl.prof['output'].values * pl.n_plants
+        default_profile, unit, con = best_unit(tot_profile,
                                                'kW', no_data=0,
                                                fstat=np.median,
                                                powershift=0)
 
-        graph = line(x=reducelabels(pl.profile.index.strftime('%d-%b %H:%M')),
+        graph = line(x=reducelabels(pl.prof.index.strftime('%d-%b %H:%M')),
                      y_labels=['{} {} profile [{}]'.format(kind,
                                                            pl.resolution[1],
                                                            unit)],
@@ -82,7 +82,8 @@ def run_source(kind, pl, data_in,
 
         # monthly profile of energy production
 
-        df_month = pl.profile.groupby(pd.Grouper(freq='M')).sum()
+        df_month = pl.prof.groupby(pd.Grouper(freq='M')).sum()
+        df_month['output'] = df_month['output'] * pl.n_plants
         monthly_profile, unit, con = best_unit(df_month['output'].values,
                                                'kWh', no_data=0,
                                                fstat=np.median,
@@ -123,8 +124,6 @@ def calculation(output_directory, inputs_raster_selection,
             }
 
     discount_rate = float(inputs_parameter_selection['discount_rate'])
-    # generate the output raster file
-    output_suitable = generate_output_file_tif(output_directory)
 
     # retrieve the inputs layes
     # ds = gdal.Open(inputs_raster_selection["wind_50m"])
@@ -138,27 +137,24 @@ def calculation(output_directory, inputs_raster_selection,
     plant_raster = np.nan_to_num(plant_raster)
     plant_raster[plant_raster > 0] = 1
     # TODO: set peak power and swept area from a list of turbines
-    wind_plant = plant.Wind_plant('Wind',
-                                  peak_power=w_in['peak_power']
-                                  )
+    wind_plant = wind.Wind_plant(id='Wind',
+                                 peak_power=w_in['peak_power'],
+                                 height=w_in["height"],
+                                 model='Enercon E48 800'
+                                 )
     wind_plant.area = w_in["res_hub"]*w_in["res_hub"]
-    wind_plant.height = w_in["height"]
-
     wind_plant.n_plants = plant_raster.sum()
     if wind_plant.n_plants > 0:
-        wind_plant.id = "Wind"
         wind_plant.raw = False
         wind_plant.mean = None
-        wind_plant.profile = get_profile(potential, ds,
-                                         potential, plant_raster,
-                                         wind_plant)
-        wind_plant.energy_production = (wind_plant.profile.sum()[0]
-                                        / wind_plant.n_plants)
+        wind_plant.lat, wind_plant.long = get_lat_long(ds, potential)
+        wind_plant.prof = wind_plant.profile()
+        wind_plant.energy_production = wind_plant.prof.sum()[0]
         wind_plant.resolution = ['Hours', 'hourly']
         res = run_source('Wind', wind_plant, w_in, plant_raster,
                          plant_raster,
                          potential, plant_raster,
-                         output_suitable, discount_rate,
+                         discount_rate,
                          ds)
     else:
         # TODO: How to manage message

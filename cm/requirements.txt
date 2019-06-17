@@ -21,3 +21,5 @@ pandas
 networkx
 pyomo
 skimage
+git+https://github.com/HotMaps/reslib.git
+

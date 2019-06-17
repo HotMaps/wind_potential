@@ -10,6 +10,8 @@ import sys
 import numpy as np
 import warnings
 from osgeo import gdal
+import reslib.planning as plan
+
 # TODO:  chane with try and better define the path
 path = os.path.dirname(os.path.dirname
                        (os.path.dirname(os.path.abspath(__file__))))
@@ -17,10 +19,22 @@ path = os.path.join(path, 'app', 'api_v1')
 if path not in sys.path:
         sys.path.append(path)
 
-import my_calculation_module_directory.plants as plants
 from my_calculation_module_directory.visualization import quantile_colors
 from my_calculation_module_directory.utils import best_unit, xy2latlong
-from my_calculation_module_directory.time_profiles import wind_profile
+
+
+def get_lat_long(ds, most_suitable):
+    """
+    Return the lat_long of the pixel with mean value of the resources
+    """
+    diff = most_suitable - np.mean(most_suitable[most_suitable > 0])
+    i, j = np.unravel_index(np.abs(diff).argmin(), diff.shape)
+    ds_geo = ds.GetGeoTransform()
+    x = ds_geo[0] + i * ds_geo[1]
+    y = ds_geo[3] + j * ds_geo[5]
+    long, lat = xy2latlong(x, y, ds)
+    # generation of the output time profile
+    return lat, long
 
 
 def get_plants(plant, target, speed,
@@ -56,7 +70,7 @@ def get_indicators(kind, plant, most_suitable,
     Return a dictionary with main indicator of the specific source
     """
     n_plants = n_plant_raster.sum()
-    tot_en_gen_per_year = plant.energy_production * n_plants
+    tot_en_gen_per_year = plant.energy_production * plant.n_plants
     tot_en_gen, unit, factor = best_unit(tot_en_gen_per_year,
                                          current_unit='kWh/year',
                                          no_data=0,
@@ -130,9 +144,7 @@ def get_profile(irradiation_values, ds,
     long, lat = xy2latlong(x, y, ds)
     # generation of the output time profile
     n_plants = n_plant_raster.sum()
-    df_profile = wind_profile(lat, long,
-                              plant.height, plant.peak_power,
-                              plant.raw, plant.mean)
+    df_profile = plant.profile()
     return df_profile * n_plants
 
 
@@ -150,9 +162,9 @@ def constraints(target, speed, available_area, plant_px,
 
     if target == 0:
         target = energy_available
-    rules = plants.Planning_rules(reduction_factor*available_area.sum(),
-                                  target, available_area.sum(),
-                                  energy_available)
+    rules = plan.Planning_rules(reduction_factor*available_area.sum(),
+                                target, available_area.sum(),
+                                energy_available)
     n_plants = rules.n_plants(plant)
     return n_plants, plant
 

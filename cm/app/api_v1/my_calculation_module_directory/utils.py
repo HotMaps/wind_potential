@@ -188,7 +188,6 @@ def production_per_plant(json, kind='PV'):
 
     :returns: the vale
     """
-    import ipdb; ipdb.set_trace()
     value, unit = search(json['result']['indicator'],
                          '{} total energy production'.format(kind))
     energy = ureg.Quantity(value, unit)

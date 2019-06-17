@@ -21,6 +21,7 @@ if not os.path.exists(UPLOAD_DIRECTORY):
 
 ureg = UnitRegistry()
 
+
 def load_input():
     """
     Load the input values in the file constant.py
