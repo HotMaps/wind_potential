@@ -5,12 +5,9 @@ import os.path
 from shutil import copyfile
 from .test_client import TestClient
 from app.constant import INPUTS_CALCULATION_MODULE
-from osgeo import gdal
-import numpy as np
 import matplotlib.pyplot as plt
 from pint import UnitRegistry
-
-from app.api_v1.my_calculation_module_directory.utils import production_per_plant, search, diff_raster
+import resutils.output as ro
 
 UPLOAD_DIRECTORY = os.path.join(tempfile.gettempdir(),
                                 'hotmaps', 'cm_files_uploaded')
@@ -116,13 +113,13 @@ class TestAPI(unittest.TestCase):
         # 0) print graphs
         test_graph(json['result']['graphics'])
         # 1) assert that the production is beetween 5 and 15 kWh/day per plant
-        e_plant = production_per_plant(json, 'Wind')
+        e_plant = ro.production_per_plant(json, 'Wind')
         e_plant.ito(ureg.kilowatt_hour/ureg.year)
         self.assertGreaterEqual(e_plant.magnitude, 50000)
         self.assertLessEqual(e_plant.magnitude, 6000000)
         # 2) assert that the value of lcoe is between 0.02 and 0.2 euro/kWh
-        lcoe, unit = search(json['result']['indicator'],
-                            'Levelized Cost of Wind Energy')
+        lcoe, unit = ro.search(json['result']['indicator'],
+                               'Levelized Cost of Wind Energy')
         self.assertGreaterEqual(lcoe, 0.02)
         self.assertLessEqual(lcoe, 0.2)
         self.assertTrue(rv.status_code == 200)

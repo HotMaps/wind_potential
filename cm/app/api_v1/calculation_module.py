@@ -6,6 +6,9 @@ import pandas as pd
 import warnings
 import reslib.wind as wind
 import reslib.plant as plant
+import resutils.raster as rr
+import resutils.output as ro
+import resutils.unit as ru
 
 # TODO:  change with try and better define the path
 path = os.path.dirname(os.path.dirname
@@ -13,34 +16,7 @@ path = os.path.dirname(os.path.dirname
 path = os.path.join(path, 'app', 'api_v1')
 if path not in sys.path:
         sys.path.append(path)
-from my_calculation_module_directory.energy_production import get_plants, get_lat_long, get_raster, get_indicators
-from my_calculation_module_directory.visualization import line, reducelabels
 from ..helper import generate_output_file_tif
-from my_calculation_module_directory.utils import best_unit, raster_resize
-
-
-
-def get_integral_error(pl, interval):
-    """
-    Compute the integrale of the production profile and compute
-    the error with respect to the total energy production
-    obtained by the raster file
-    :parameter pl: plant
-    :parameter interval: step over computing the integral
-
-    :returns: the relative error
-    """
-    error = abs((pl.energy_production * pl.n_plants -
-                 pl.profile.sum() * interval) /
-                (pl.energy_production * pl.n_plants)) * 100
-    if error[0] > 5:
-        import ipdb; ipdb.set_trace()
-        message = """Difference between raster value sum and {}
-                      total energy greater than {}%""".format(pl.id,
-                                                              int(error))
-        warnings.warn(message)
-        return message
-    return
 
 
 def run_source(kind, pl, data_in,
@@ -60,40 +36,41 @@ def run_source(kind, pl, data_in,
 
     result = dict()
     if most_suitable.max() > 0:
-        result['indicator'] = get_indicators(kind, pl, most_suitable,
-                                             n_plant_raster, discount_rate)
+        result['indicator'] = ro.get_indicators(kind, pl, most_suitable,
+                                                n_plant_raster, discount_rate)
 
         # default profile
         tot_profile = pl.prof['output'].values * pl.n_plants
-        default_profile, unit, con = best_unit(tot_profile,
-                                               'kW', no_data=0,
-                                               fstat=np.median,
-                                               powershift=0)
+        default_profile, unit, con = ru.best_unit(tot_profile,
+                                                  'kW', no_data=0,
+                                                  fstat=np.median,
+                                                  powershift=0)
 
-        graph = line(x=reducelabels(pl.prof.index.strftime('%d-%b %H:%M')),
-                     y_labels=['{} {} profile [{}]'.format(kind,
+        graph = ro.line(x=ro.reducelabels(pl.prof.index.strftime('%d-%b %H:%M')),
+                        y_labels=['{} {} profile [{}]'.format(kind,
+                                                              pl.resolution[1],
+                                                              unit)],
+                        y_values=[default_profile], unit=unit,
+                        xLabel=pl.resolution[0],
+                        yLabel='{} {} profile [{}]'.format(kind,
                                                            pl.resolution[1],
-                                                           unit)],
-                     y_values=[default_profile], unit=unit,
-                     xLabel=pl.resolution[0],
-                     yLabel='{} {} profile [{}]'.format(kind,
-                                                        pl.resolution[1],
-                                                        unit))
+                                                           unit))
 
         # monthly profile of energy production
 
         df_month = pl.prof.groupby(pd.Grouper(freq='M')).sum()
         df_month['output'] = df_month['output'] * pl.n_plants
-        monthly_profile, unit, con = best_unit(df_month['output'].values,
-                                               'kWh', no_data=0,
-                                               fstat=np.median,
-                                               powershift=0)
-        graph_month = line(x=df_month.index.strftime('%b'),
-                           y_labels=[""""{} monthly energy
-                                      production [{}]""".format(kind, unit)],
-                           y_values=[monthly_profile], unit=unit,
-                           xLabel="Months",
-                           yLabel='{} monthly profile [{}]'.format(kind, unit))
+        monthly_profile, unit, con = ru.best_unit(df_month['output'].values,
+                                                  'kWh', no_data=0,
+                                                  fstat=np.median,
+                                                  powershift=0)
+        graph_month = ro.line(x=df_month.index.strftime('%b'),
+                              y_labels=[""""{} monthly energy
+                                        production [{}]""".format(kind, unit)],
+                              y_values=[monthly_profile], unit=unit,
+                              xLabel="Months",
+                              yLabel='{} monthly profile [{}]'.format(kind,
+                                                                      unit))
 
         graphics = [graph, graph_month]
 
@@ -147,7 +124,7 @@ def calculation(output_directory, inputs_raster_selection,
     if wind_plant.n_plants > 0:
         wind_plant.raw = False
         wind_plant.mean = None
-        wind_plant.lat, wind_plant.long = get_lat_long(ds, potential)
+        wind_plant.lat, wind_plant.long = rr.get_lat_long(ds, potential)
         wind_plant.prof = wind_plant.profile()
         wind_plant.energy_production = wind_plant.prof.sum()[0]
         wind_plant.resolution = ['Hours', 'hourly']
