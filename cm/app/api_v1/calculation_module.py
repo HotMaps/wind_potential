@@ -17,7 +17,7 @@ path = os.path.join(path, 'app', 'api_v1')
 if path not in sys.path:
         sys.path.append(path)
 from ..helper import generate_output_file_tif
-
+from  ..constant import CM_NAME
 
 def run_source(kind, pl, data_in,
                most_suitable,
@@ -133,6 +133,7 @@ def calculation(output_directory, inputs_raster_selection,
                          potential, plant_raster,
                          discount_rate,
                          ds)
+        res['name'] = CM_NAME
     else:
         # TODO: How to manage message
         res = dict()
