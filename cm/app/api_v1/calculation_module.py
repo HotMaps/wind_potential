@@ -19,6 +19,16 @@ if path not in sys.path:
 from ..helper import generate_output_file_tif
 from  ..constant import CM_NAME
 
+# TODO the token now is null, only 5 requests in one day,
+# please set the environemnt variable with a TOKEN
+# for renewable ninja
+if 'TOKEN' in os.environ:
+    TOKEN = os.environ['TOKEN']
+else:
+    warnings.warn("TOKEN variable not set.")
+    TOKEN = None
+
+
 def run_source(kind, pl, data_in,
                most_suitable,
                n_plant_raster,
@@ -125,7 +135,7 @@ def calculation(output_directory, inputs_raster_selection,
         wind_plant.raw = False
         wind_plant.mean = None
         wind_plant.lat, wind_plant.long = rr.get_lat_long(ds, potential)
-        wind_plant.prof = wind_plant.profile()
+        wind_plant.prof = wind_plant.profile(token=TOKEN)
         wind_plant.energy_production = wind_plant.prof.sum()[0]
         wind_plant.resolution = ['Hours', 'hourly']
         res = run_source('Wind', wind_plant, w_in, plant_raster,

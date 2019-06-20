@@ -21,12 +21,12 @@ TRANFER_PROTOCOLE ='http://'
 
 
 INPUTS_CALCULATION_MODULE = [
-    {'input_name': 'Wind Hub Setup costs (all inclusive) price [currency/kWp]',
+    {'input_name': 'Wind Hub Setup costs (all inclusive) price [Euro/kWp]',
      'input_type': 'input',
      'input_parameter_name': 'setup_costs',
      'input_value': 2000,
      'input_priority': 0,
-     'input_unit': 'currency/kWp',
+     'input_unit': 'Euro/kWp',
      'input_min': 0.0,
      'input_max': 10000,
      'cm_id': CM_ID
