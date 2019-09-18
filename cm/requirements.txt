@@ -16,10 +16,8 @@ six==1.12.0
 flasgger==0.9.3
 Pika==1.1.0
 amqp==2.5.1
-scipy
 pandas
-networkx
-pyomo
-skimage
+
 git+https://github.com/HotMaps/reslib.git
+git+https://github.com/HotMaps/resutils.git
 

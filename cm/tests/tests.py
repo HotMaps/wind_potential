@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 from pint import UnitRegistry
 import resutils.output as ro
 
-UPLOAD_DIRECTORY = os.path.join(tempfile.gettempdir(),
-                                'hotmaps', 'cm_files_uploaded')
+UPLOAD_DIRECTORY = os.path.join(tempfile.gettempdir(), "hotmaps", "cm_files_uploaded")
 
 if not os.path.exists(UPLOAD_DIRECTORY):
     os.makedirs(UPLOAD_DIRECTORY)
@@ -27,7 +26,7 @@ def load_input():
     """
     inputs_parameter = {}
     for inp in INPUTS_CALCULATION_MODULE:
-        inputs_parameter[inp['input_parameter_name']] = inp['input_value']
+        inputs_parameter[inp["input_parameter_name"]] = inp["input_value"]
     return inputs_parameter
 
 
@@ -39,7 +38,7 @@ def load_raster(area):
 
     :return a dictionary with the raster file paths
     """
-    raster_file_path = os.path.join('tests/data', area)
+    raster_file_path = os.path.join("tests/data", area)
     save_path_area = os.path.join(UPLOAD_DIRECTORY, area)
     copyfile(raster_file_path, save_path_area)
     inputs_raster_selection = {}
@@ -63,33 +62,30 @@ def test_graph(graph):
     Print a graph with matplot lib by reading the dictionary with graph info
     """
     for n, g in enumerate(graph):
-        graph_file_path = os.path.join('tests/data', 'plot{}.png'.format(n))
+        graph_file_path = os.path.join("tests/data", "plot{}.png".format(n))
         # simulate copy from HTAPI to CM
-        x = [i for i in range(0, len(g['data']['labels']))]
+        x = [i for i in range(0, len(g["data"]["labels"]))]
         # TODO loop in datasets to plot more lines
-        y = [int(i) for i in g['data']['datasets'][0]['data']]
-        plt.plot(x, y, label=g['data']['datasets'][0]['label'])
-        plt.xlabel(g['xLabel'])
-        plt.ylabel(g['yLabel'])
-        plt.xticks(rotation=90)
-        ax = plt.gca()
-        axes = plt.axes()
-        axes.set_xticks(x)
-        ax.set_xticklabels(g['data']['labels'])
-#        locs, labels = plt.xticks()
-#        plt.xticks(locs, g['data']['labels'])
-        plt.savefig(graph_file_path)
+        y = [float(i) for i in g["data"]["datasets"][0]["data"]]
+        fig, ax = plt.subplots()
+        ax.plot(x, y, label=g["data"]["datasets"][0]["label"])
+        ax.set_xlabel(g["xLabel"])
+        ax.set_ylabel(g["yLabel"])
+        ax.set_xticks(x)
+        ax.set_xticklabels(g["data"]["labels"], rotation=90)
+        ax.grid(True)
+        fig.tight_layout()
+        fig.savefig(graph_file_path)
         plt.clf()
 
 
 class TestAPI(unittest.TestCase):
-
     def setUp(self):
-        self.app = create_app(os.environ.get('FLASK_CONFIG', 'development'))
+        self.app = create_app(os.environ.get("FLASK_CONFIG", "development"))
         self.ctx = self.app.app_context()
         self.ctx.push()
 
-        self.client = TestClient(self.app,)
+        self.client = TestClient(self.app)
 
     def tearDown(self):
 
@@ -104,25 +100,29 @@ class TestAPI(unittest.TestCase):
         inputs_raster_selection = load_raster("area_for_test.tif")
         inputs_parameter_selection = load_input()
         # register the calculation module a
-        payload = {"inputs_raster_selection": inputs_raster_selection,
-                   "inputs_vector_selection": [],
-                   "inputs_parameter_selection": inputs_parameter_selection}
+        payload = {
+            "inputs_raster_selection": inputs_raster_selection,
+            "inputs_vector_selection": [],
+            "inputs_parameter_selection": inputs_parameter_selection,
+        }
 
-        rv, json = self.client.post('computation-module/compute/',
-                                    data=payload)
+        rv, json = self.client.post("computation-module/compute/", data=payload)
         # 0) print graphs
-        test_graph(json['result']['graphics'])
-        # 1) assert that the production is beetween 5 and 15 kWh/day per plant
-        e_plant = ro.production_per_plant(json, 'Wind')
-        e_plant.ito(ureg.kilowatt_hour/ureg.year)
+        test_graph(json["result"]["graphics"])
+        # 1) assert that the production is beetween a reasonable range of kWh/day per plant
+        e_plant = ro.production_per_plant(json, "Wind")
+        e_plant.ito(ureg.kilowatt_hour / ureg.year)
         self.assertGreaterEqual(e_plant.magnitude, 50000)
         self.assertLessEqual(e_plant.magnitude, 6000000)
         # 2) assert that the value of lcoe is between 0.02 and 0.2 euro/kWh
-        lcoe, unit = ro.search(json['result']['indicator'],
-                               'Levelized Cost of Wind Energy')
+        lcoe, unit = ro.search(
+            json["result"]["indicator"], "Levelized Cost of Wind Energy"
+        )
         self.assertGreaterEqual(lcoe, 0.02)
         self.assertLessEqual(lcoe, 0.2)
         self.assertTrue(rv.status_code == 200)
+
+
 #
 #    def test_raster(self):
 #        """
@@ -172,4 +172,5 @@ class TestAPI(unittest.TestCase):
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
