@@ -2,7 +2,9 @@
 version: '3.2'
 
 services:
-  base_calculation_module:
+  wind_potential:
+    env_file:
+      - ./cm/.env
     build:
       context: ./cm
       dockerfile: Dockerfile
