@@ -101,7 +101,8 @@ SIGNATURE = {
        "wind_50m"   # kWh/m²/year
     ],
     "type_layer_needed": [
-       "suitable area"
+       {"type": "suitable area",
+        "description": "Availale areas that are suitable to install a wind turbine"}
     ],
     "cm_url": "Do not add something",
     "cm_description": "This computation aims to compute the wind"
