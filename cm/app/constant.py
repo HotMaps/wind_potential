@@ -95,7 +95,7 @@ INPUTS_CALCULATION_MODULE = [
 
 
 SIGNATURE = {
-    "category": "Wind energy potential",
+    "category": "Supply",
     "cm_name": CM_NAME,
     "layers_needed": [
        "wind_50m"   # kWh/m²/year
