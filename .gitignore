@@ -44,3 +44,9 @@ venv
 ../.idea/workspace.xml
 ../README.md
 .idea/encodings.xml
+
+# Test files
+*.png
+*.tif.aux.xml
+warp_test.tif
+

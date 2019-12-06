@@ -46,7 +46,7 @@ def register():
     #  200:
     #   description: MWS is aware of the CM
     #  examples:
-    #   results: {"response": {"category": "Buildings", "cm_name": "calculation_module_1", "layers_needed": ["heat_density_tot"], "cm_description": "this computation module allows to ....", "cm_url": "http://127.0.0.1:5002/", "cm_id": 1, "inputs_calculation_module": [{"input_min": 1, "input_value": 1, "input_unit": "none", "input_name": "Reduction factor", "cm_id": 1, "input_type": "input", "input_parameter_name": "reduction_factor", "input_max": 10}, {"input_min": 10, "input_value": 50, "input_unit": "", "input_name": "Blablabla", "cm_id": 1, "input_type": "range", "input_parameter_name": "bla", "input_max": 1000}]}}
+    #   results: {"response": {"category": "Buildings", "cm_name": "calculation_module_1", "layers_needed": ["heat_density_tot"], "cm_description": "this computation module allows to ....", "cm_url": "http://127.0.0.1:5002/", "cm_id": 1, "inputs_calculation_module": [{"input_min": 1, "input_value": 1, "input_unit": "none", "input_name": "Reduction factor", "cm_id": 1, "input_type": "input", "input_parameter_name": "multiplication_factor", "input_max": 10}, {"input_min": 10, "input_value": 50, "input_unit": "", "input_name": "Blablabla", "cm_id": 1, "input_type": "range", "input_parameter_name": "bla", "input_max": 1000}]}}
     #    """
 
     # about to send the external IP
@@ -107,8 +107,8 @@ def compute():
             in: path
             type: dict
             required: true
-            default: {'reduction_factor': 2}
-          - name: reduction_factor
+            default: {'multiplication_factor': 2}
+          - name: multiplication_factor
             in: path
             type: integer
             required: true
@@ -121,29 +121,34 @@ def compute():
          200:
            description: MWS is aware of the CM
            examples:
-            results: {"response": {"category": "Buildings", "cm_name": "calculation_module_1", "layers_needed": ["heat_density_tot"], "cm_description": "this computation module allows to ....", "cm_url": "http://127.0.0.1:5002/", "cm_id": 1, "inputs_calculation_module": [{"input_min": 1, "input_value": 1, "input_unit": "none", "input_name": "Reduction factor", "cm_id": 1, "input_type": "input", "input_parameter_name": "reduction_factor", "input_max": 10}, {"input_min": 10, "input_value": 50, "input_unit": "", "input_name": "Blablabla", "cm_id": 1, "input_type": "range", "input_parameter_name": "bla", "input_max": 1000}]}}
+            results: {"response": {"category": "Buildings", "cm_name": "calculation_module_1", "layers_needed": ["heat_density_tot"], "cm_description": "this computation module allows to ....", "cm_url": "http://127.0.0.1:5002/", "cm_id": 1, "inputs_calculation_module": [{"input_min": 1, "input_value": 1, "input_unit": "none", "input_name": "Reduction factor", "cm_id": 1, "input_type": "input", "input_parameter_name": "multiplication_factor", "input_max": 10}, {"input_min": 10, "input_value": 50, "input_unit": "", "input_name": "Blablabla", "cm_id": 1, "input_type": "range", "input_parameter_name": "bla", "input_max": 1000}]}}
              """
 
-    print ('CM will Compute ')
+    print ("""CM will Compute  the energy supply potential and related costs
+           for wind turbines in a
+           defined area. The inputs to the module are raster files of
+           available sites and wind speed, costs and efficiency of
+           reference wind hub and the fractions of usable
+           area where wind turbines are installed.""")
     #import ipdb; ipdb.set_trace()
     data = request.get_json()
 
     #TODO CM Developper do not need to change anything here
     # here is the inputs layers and parameters
-    inputs_raster_selection = helper.validateJSON(data["inputs_raster_selection"])
 
+    #TODO CM Developper do not need to change anything here
+    # here is the inputs layers and parameters
+    inputs_raster_selection = helper.validateJSON(data["inputs_raster_selection"])
+    print ('inputs_raster_selection', inputs_raster_selection)
+    LOGGER.info('inputs_raster_selection', inputs_raster_selection)
 
     inputs_parameter_selection = helper.validateJSON(data["inputs_parameter_selection"])
-
-
-
-    inputs_vector_selection = helper.validateJSON(data["inputs_vector_selection"])
-    print ('inputs_vector_selection', inputs_vector_selection)
-    LOGGER.info('inputs_vector_selection', inputs_vector_selection)
-
+    print ('inputs_parameter_selection', inputs_parameter_selection)
+    LOGGER.info('inputs_parameter_selection', inputs_parameter_selection)
+    
     output_directory = UPLOAD_DIRECTORY
     # call the calculation module function
-    result = calculation_module.calculation(output_directory, inputs_raster_selection,inputs_vector_selection,inputs_parameter_selection)
+    result = calculation_module.calculation(output_directory, inputs_raster_selection,inputs_parameter_selection)
 
     response = {
         'result': result

@@ -1,82 +1,160 @@
-
+import os
+import sys
 from osgeo import gdal
+import numpy as np
+import pandas as pd
+import warnings
+import reslib.wind as wind
+import reslib.plant as plant
+import resutils.raster as rr
+import resutils.output as ro
+import resutils.unit as ru
 
-from ..helper import generate_output_file_tif, create_zip_shapefiles
-import time
+# TODO:  change with try and better define the path
+path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+path = os.path.join(path, "app", "api_v1")
+if path not in sys.path:
+    sys.path.append(path)
+from ..helper import generate_output_file_tif
+from ..constant import CM_NAME
 
-""" Entry point of the calculation module function"""
-
-#TODO: CM provider must "change this code"
-#TODO: CM provider must "not change input_raster_selection,output_raster  1 raster input => 1 raster output"
-#TODO: CM provider can "add all the parameters he needs to run his CM
-#TODO: CM provider can "return as many indicators as he wants"
-def calculation(output_directory, inputs_raster_selection,inputs_vector_selection, inputs_parameter_selection):
-    #TODO the folowing code must be changed by the code of the calculation module
-
-    # generate the output raster file
-    output_raster1 = generate_output_file_tif(output_directory)
-
-
-    #retrieve the inputs layes
-    input_raster_selection =  inputs_raster_selection["heat"]
-
-    #retrieve the inputs layes
-    input_vector_selection =  inputs_vector_selection["heating_technologies_eu28"]
+# TODO the token now is null, only 5 requests in one day,
+# please set the environemnt variable with a TOKEN
+# for renewable ninja
+if "TOKEN" in os.environ:
+    TOKEN = os.environ["TOKEN"]
+else:
+    warnings.warn("TOKEN variable not set.")
+    TOKEN = None
 
 
-    #retrieve the inputs all input defined in the signature
-    factor =  int(inputs_parameter_selection["reduction_factor"])
+def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
+    """
+    Run the simulation and get indicators for the single source
+    """
+    pl.financial = plant.Financial(
+        investement_cost=int(data_in["setup_costs"] * pl.peak_power),
+        yearly_cost=data_in["tot_cost_year"],
+        plant_life=data_in["financing_years"],
+    )
 
-
-    # TODO this part bellow must be change by the CM provider
-    ds = gdal.Open(input_raster_selection)
-    ds_band = ds.GetRasterBand(1)
-
-    #----------------------------------------------------
-    pixel_values = ds.ReadAsArray()
-    #----------Reduction factor----------------
-
-    pixel_values_modified = pixel_values/ float(factor)
-    hdm_sum  = pixel_values_modified.sum()
-
-    gtiff_driver = gdal.GetDriverByName('GTiff')
-    #print ()
-    out_ds = gtiff_driver.Create(output_raster1, ds_band.XSize, ds_band.YSize, 1, gdal.GDT_UInt16, ['compress=DEFLATE',
-                                                                                                         'TILED=YES',
-                                                                                                         'TFW=YES',
-                                                                                                         'ZLEVEL=9',
-                                                                                                         'PREDICTOR=1'])
-    out_ds.SetProjection(ds.GetProjection())
-    out_ds.SetGeoTransform(ds.GetGeoTransform())
-
-    ct = gdal.ColorTable()
-    ct.SetColorEntry(0, (0,0,0,255))
-    ct.SetColorEntry(1, (110,220,110,255))
-    out_ds.GetRasterBand(1).SetColorTable(ct)
-
-    out_ds_band = out_ds.GetRasterBand(1)
-    out_ds_band.SetNoDataValue(0)
-    out_ds_band.WriteArray(pixel_values_modified)
-
-    del out_ds
-    # output geneneration of the output
-    graphics = []
-    vector_layers = []
-
-    #TODO to create zip from shapefile use create_zip_shapefiles from the helper before sending result
-    #TODO exemple  output_shpapefile_zipped = create_zip_shapefiles(output_directory, output_shpapefile)
     result = dict()
-    result['name'] = 'CM Heat density divider'
-    result['indicator'] = [{"unit": "KWh", "name": "Heat density total divided by  {}".format(factor),"value": str(hdm_sum)}]
-    result['graphics'] = graphics
-    result['vector_layers'] = vector_layers
-    result['raster_layers'] = [{"name": "layers of heat_densiy {}".format(factor),"path": output_raster1} ]
+    if most_suitable.max() > 0:
+        result["indicator"] = ro.get_indicators(
+            kind, pl, most_suitable, n_plant_raster, discount_rate
+        )
+
+        # default profile
+        tot_profile = pl.prof["electricity"].values * pl.n_plants
+        default_profile, unit, con = ru.best_unit(
+            tot_profile, "kW", no_data=0, fstat=np.median, powershift=0
+        )
+
+        graph = ro.line(
+            x=ro.reducelabels(pl.prof.index.strftime("%d-%b %H:%M")),
+            y_labels=["{} {} profile [{}]".format(kind, pl.resolution[1], unit)],
+            y_values=[default_profile],
+            unit=unit,
+            xLabel=pl.resolution[0],
+            yLabel="{} {} profile [{}]".format(kind, pl.resolution[1], unit),
+        )
+
+        # monthly profile of energy production
+
+        df_month = pl.prof.groupby(pd.Grouper(freq="M")).sum()
+        df_month["output"] = df_month["electricity"] * pl.n_plants
+        monthly_profile, unit, con = ru.best_unit(
+            df_month["output"].values, "kWh", no_data=0, fstat=np.median, powershift=0
+        )
+        graph_month = ro.line(
+            x=df_month.index.strftime("%b"),
+            y_labels=[
+                """"{} monthly energy
+                                        production [{}]""".format(
+                    kind, unit
+                )
+            ],
+            y_values=[monthly_profile],
+            unit=unit,
+            xLabel="Months",
+            yLabel="{} monthly profile [{}]".format(kind, unit),
+        )
+
+        graphics = [graph, graph_month]
+
+        result["graphics"] = graphics
     return result
 
 
-def colorizeMyOutputRaster(out_ds):
-    ct = gdal.ColorTable()
-    ct.SetColorEntry(0, (0,0,0,255))
-    ct.SetColorEntry(1, (110,220,110,255))
-    out_ds.SetColorTable(ct)
-    return out_ds
+def calculation(output_directory, inputs_raster_selection, inputs_parameter_selection):
+    """
+    Main function
+    """
+    # list of error messages
+    # TODO: to be fixed according to CREM format
+    messages = []
+
+    # retrieve the inputs all input defined in the signature
+    w_in = {
+        "res_hub": float(inputs_parameter_selection["res_hub"]),
+        "height": float(inputs_parameter_selection["height"]),
+        "setup_costs": int(inputs_parameter_selection["setup_costs"]),
+        "tot_cost_year": (
+            float(inputs_parameter_selection["maintenance_percentage"])
+            / 100
+            * int(inputs_parameter_selection["setup_costs"])
+        ),
+        "financing_years": int(inputs_parameter_selection["financing_years"]),
+        "peak_power": float(inputs_parameter_selection["peak_power"]),
+    }
+
+    discount_rate = float(inputs_parameter_selection["discount_rate"])
+
+    # retrieve the inputs layes
+    # ds = gdal.Open(inputs_raster_selection["wind_50m"])
+    ds = gdal.Warp(
+        "warp_test.tif",
+        inputs_raster_selection["wind_50m"],
+        outputType=gdal.GDT_Float32,
+        xRes=w_in["res_hub"],
+        yRes=w_in["res_hub"],
+        dstNodata=0,
+    )
+    plant_raster = ds.ReadAsArray()
+    potential = ds.ReadAsArray()
+    potential = np.nan_to_num(potential)
+    plant_raster = np.nan_to_num(plant_raster)
+    plant_raster[plant_raster > 0] = 1
+    # TODO: set peak power and swept area from a list of turbines
+    wind_plant = wind.WindPlant(
+        id_plant="Wind",
+        peak_power=w_in["peak_power"],
+        height=w_in["height"],
+        model="Enercon E48 800",
+    )
+    wind_plant.area = w_in["res_hub"] * w_in["res_hub"]
+    wind_plant.n_plants = plant_raster.sum()
+    if wind_plant.n_plants > 0:
+        wind_plant.raw = False
+        wind_plant.mean = None
+        wind_plant.lat, wind_plant.lon = rr.get_lat_long(ds, potential)
+        wind_plant.prof = wind_plant.profile()
+        wind_plant.energy_production = wind_plant.prof.sum()[0]
+        wind_plant.resolution = ["Hours", "hourly"]
+        """
+        run_source(kind, pl, data_in,
+               most_suitable,
+               n_plant_raster,
+               discount_rate,
+               )
+        """
+        res = run_source(
+            "Wind", wind_plant, w_in, potential, plant_raster, discount_rate
+        )
+        res["name"] = CM_NAME
+    else:
+        # TODO: How to manage message
+        res = dict()
+        warnings.warn("Not suitable pixels have been identified.")
+
+    return res
