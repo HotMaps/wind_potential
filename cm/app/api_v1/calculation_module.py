@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 from osgeo import gdal
@@ -27,11 +28,21 @@ else:
     warnings.warn("TOKEN variable not set.")
     TOKEN = None
 
+# set a logger
+LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
+              '-35s %(lineno) -5d: %(message)s')
+logging.basicConfig(format=LOG_FORMAT)
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel("DEBUG")
 
 def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
     """
     Run the simulation and get indicators for the single source
     """
+    LOGGER.info("Financial parameters: "
+                f'setup_costs={data_in["setup_costs"]} '
+                f'yearly_cost={data_in["tot_cost_year"]} '
+                f'plant_life={data_in["financing_years"]}')
     pl.financial = plant.Financial(
         investement_cost=int(data_in["setup_costs"] * pl.peak_power),
         yearly_cost=data_in["tot_cost_year"],
@@ -43,12 +54,18 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
         result["indicator"] = ro.get_indicators(
             kind, pl, most_suitable, n_plant_raster, discount_rate
         )
+        LOGGER.info(f'indicator={result["indicator"]}')
 
         # default profile
         tot_profile = pl.prof["electricity"].values * pl.n_plants
         default_profile, unit, con = ru.best_unit(
             tot_profile, "kW", no_data=0, fstat=np.median, powershift=0
         )
+        LOGGER.info("Horuly profile "
+                    f'tot_profile={tot_profile} '
+                    f'default_profile={default_profile} '
+                    f'unit={unit} '
+                    f'con={con}')
 
         graph = ro.line(
             x=ro.reducelabels(pl.prof.index.strftime("%d-%b %H:%M")),
@@ -66,6 +83,10 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
         monthly_profile, unit, con = ru.best_unit(
             df_month["output"].values, "kWh", no_data=0, fstat=np.median, powershift=0
         )
+        LOGGER.info(f'monthly_profile={monthly_profile} '
+                    f'unit={unit} '
+                    f'con={con}')
+                
         graph_month = ro.line(
             x=df_month.index.strftime("%b"),
             y_labels=[
@@ -83,6 +104,7 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
         graphics = [graph, graph_month]
 
         result["graphics"] = graphics
+        LOGGER.info("Computed correctly!")
     return result
 
 
