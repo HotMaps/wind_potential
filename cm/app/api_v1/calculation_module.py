@@ -1,4 +1,5 @@
 import logging
+import json
 import os
 import sys
 from osgeo import gdal
@@ -54,7 +55,7 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
         result["indicator"] = ro.get_indicators(
             kind, pl, most_suitable, n_plant_raster, discount_rate
         )
-        LOGGER.info(f'indicator={result["indicator"]}')
+        LOGGER.info(f'indicator={json.dumps(result["indicator"])}')
 
         # default profile
         tot_profile = pl.prof["electricity"].values * pl.n_plants
@@ -161,7 +162,7 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
         wind_plant.mean = None
         wind_plant.lat, wind_plant.lon = rr.get_lat_long(ds, potential)
         wind_plant.prof = wind_plant.profile()
-        wind_plant.energy_production = wind_plant.prof.sum()[0]
+        wind_plant.energy_production = wind_plant.prof.sum()["electricity"]
         wind_plant.resolution = ["Hours", "hourly"]
         """
         run_source(kind, pl, data_in,
