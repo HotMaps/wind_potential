@@ -132,9 +132,12 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
     }
 
     discount_rate = float(inputs_parameter_selection["discount_rate"])
+    LOGGER.info(f"w_in={w_in}")
 
     # retrieve the inputs layes
     # ds = gdal.Open(inputs_raster_selection["wind_50m"])
+    LOGGER.info(f"inputs_raster_selection={inputs_raster_selection}")
+    LOGGER.info(f"inputs_raster_selection.keys()={inputs_raster_selection.keys()}")
     ds = gdal.Warp(
         "warp_test.tif",
         inputs_raster_selection["wind_50m"],
@@ -179,5 +182,5 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
         # TODO: How to manage message
         res = dict()
         warnings.warn("Not suitable pixels have been identified.")
-
+    LOGGER.info("Wind computation completed!")
     return res
