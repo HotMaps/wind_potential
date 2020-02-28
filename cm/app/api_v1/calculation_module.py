@@ -20,14 +20,6 @@ if path not in sys.path:
 from ..helper import generate_output_file_tif
 from ..constant import CM_NAME
 
-# TODO the token now is null, only 5 requests in one day,
-# please set the environemnt variable with a TOKEN
-# for renewable ninja
-if "TOKEN" in os.environ:
-    TOKEN = os.environ["TOKEN"]
-else:
-    warnings.warn("TOKEN variable not set.")
-    TOKEN = None
 
 # set a logger
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
@@ -35,6 +27,13 @@ LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
 logging.basicConfig(format=LOG_FORMAT)
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel("DEBUG")
+
+# TODO the token now is null, only 5 requests in one day,
+# please set the environemnt variable with a TOKEN
+# for renewable ninja
+if "RES_NINJA_TOKENS" not in os.environ:
+    LOGGER.warning("RES_NINJA_TOKENS environmental variable not set!")
+
 
 def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
     """
