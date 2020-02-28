@@ -12,16 +12,26 @@ LOGGER.setLevel("DEBUG")
 
 queue_name =  RPC_CM_ALIVE + str(CM_ID)
 parameters = pika.URLParameters(str(CELERY_BROKER_URL))
-connection = pika.BlockingConnection(parameters)
+
+try:
+    connection = pika.BlockingConnection(parameters)
+except Exception as exc:
+    LOGGER.exception("Failed to pika.BlockConnection >> "
+                     f"queue_name = {queue_name} >> "
+                     f"broaker = {str(CELERY_BROKER_URL)} >> "
+                     f"parameters = {parameters} >> "
+                     f"exception = {exc}"
+                     )
+    raise exc
 
 try:
     channel = connection.channel()
 except Exception as exc:
-    LOGGER.exception("Failed to acquire the channel – "
-                     f"queue_name = {queue_name} – "
-                     f"broaker = {str(CELERY_BROKER_URL)} – "
-                     f"parameters = {parameters} – "
-                     f"connection = {connection} – "
+    LOGGER.exception("Failed to acquire the channel >> "
+                     f"queue_name = {queue_name} >> "
+                     f"broaker = {str(CELERY_BROKER_URL)} >> "
+                     f"parameters = {parameters} >> "
+                     f"connection = {connection} >> "
                      f"exception = {exc}"
                      )
     raise exc
@@ -29,11 +39,11 @@ except Exception as exc:
 try:
     channel.queue_declare(queue=queue_name)
 except Exception as exc:
-    LOGGER.exception("Failed to declare queue – "
-                     f"queue_name = {queue_name} – "
-                     f"broaker = {str(CELERY_BROKER_URL)} – "
-                     f"parameters = {parameters} – "
-                     f"connection = {connection} – "
+    LOGGER.exception("Failed to declare queue >> "
+                     f"queue_name = {queue_name} >> "
+                     f"broaker = {str(CELERY_BROKER_URL)} >> "
+                     f"parameters = {parameters} >> "
+                     f"connection = {connection} >> "
                      f"exception = {exc}"
                      )
     raise exc
