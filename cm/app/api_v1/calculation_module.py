@@ -134,12 +134,12 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
     LOGGER.info(f"w_in={w_in}")
 
     # retrieve the inputs layes
-    # ds = gdal.Open(inputs_raster_selection["wind_50m"])
+    # ds = gdal.Open(inputs_raster_selection["output_wind_speed"])
     LOGGER.info(f"inputs_raster_selection={inputs_raster_selection}")
     LOGGER.info(f"inputs_raster_selection.keys()={inputs_raster_selection.keys()}")
     ds = gdal.Warp(
         "warp_test.tif",
-        inputs_raster_selection["wind_50m"],
+        inputs_raster_selection["output_wind_speed"],
         outputType=gdal.GDT_Float32,
         xRes=w_in["res_hub"],
         yRes=w_in["res_hub"],

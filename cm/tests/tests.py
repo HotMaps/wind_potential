@@ -42,7 +42,7 @@ def load_raster(area):
     save_path_area = os.path.join(UPLOAD_DIRECTORY, area)
     copyfile(raster_file_path, save_path_area)
     inputs_raster_selection = {}
-    inputs_raster_selection["wind_50m"] = save_path_area
+    inputs_raster_selection["output_wind_speed"] = save_path_area
     return inputs_raster_selection
 
 

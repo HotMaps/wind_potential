@@ -98,7 +98,7 @@ SIGNATURE = {
     "category": "Supply",
     "cm_name": CM_NAME,
     "layers_needed": [
-       "wind_50m"   # kWh/m²/year
+       "output_wind_speed"   # kWh/m²/year
     ],
     "type_layer_needed": [
        {"type": "suitable area",
