@@ -101,7 +101,7 @@ SIGNATURE = {
        "output_wind_speed"   # kWh/m²/year
     ],
     "type_layer_needed": [
-       {"type": "suitable area",
+       {"type": "output_wind_speed",
         "description": "Availale areas that are suitable to install a wind turbine"}
     ],
     "cm_url": "Do not add something",
