@@ -194,5 +194,5 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
         )
         print("Not suitable pixels have been identified.")
     res["name"] = CM_NAME
-    print("Wind computation completed!")
+    print(f"Wind computation completed: {res}")
     return res
