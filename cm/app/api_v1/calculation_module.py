@@ -184,7 +184,6 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
             )
         except Exception as exc:
             print(f"FAILED to execute run_source function due to {exc}")
-        res["name"] = CM_NAME
     else:
         res = dict(
             indicator=dict(
@@ -194,5 +193,6 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
             )
         )
         print("Not suitable pixels have been identified.")
+    res["name"] = CM_NAME
     print("Wind computation completed!")
     return res
