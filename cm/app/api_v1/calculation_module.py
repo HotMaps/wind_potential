@@ -187,7 +187,7 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
         res["name"] = CM_NAME
     else:
         res = dict(
-            indicators=dict(
+            indicator=dict(
                 unit="",
                 name="Not suitable pixels have been identified in the area selected, please select another area",
                 value=0,
