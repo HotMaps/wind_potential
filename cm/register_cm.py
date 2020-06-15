@@ -22,11 +22,12 @@ def start_runner():
             LOGGER.info('Server not yet started')
 
             if type(response) is bytes:
-                # if the type is byte we tconvert the response to STR
-                response = json.loads(response.decode('utf-8'))
-            print (' response', response)
-            # then we dcode this response
+                # if the type is byte we convert the response to STR
+                response = response.decode('utf-8')
+
             cm = json.loads(response)
+            print (' response', cm)
+
             cm_id = cm["cm_id"]
             if str(CM_ID) == str(cm_id) :
                 LOGGER.info('Server started, quiting start_loop')
