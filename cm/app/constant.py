@@ -26,7 +26,7 @@ INPUTS_CALCULATION_MODULE = [
      'input_value': 2000,
      'input_priority': 0,
      'input_unit': 'Euro/kWp',
-     'input_min': 0.0,
+     'input_min': 10.0,
      'input_max': 10000,
      'cm_id': CM_ID
      },
@@ -36,7 +36,7 @@ INPUTS_CALCULATION_MODULE = [
      'input_parameter_name': 'res_hub',
      'input_value': 1000,
      'input_unit': ' ',
-     'input_min': 0,
+     'input_min': 20,
      'input_max': 5000,
      'cm_id': CM_ID
      },
@@ -46,7 +46,7 @@ INPUTS_CALCULATION_MODULE = [
      'input_value': 800,
      'input_priority': 1,
      'input_unit': 'kW',
-     'input_min': 0,
+     'input_min': 1,
      'input_max': 5000,
      'cm_id': CM_ID
      },
@@ -56,7 +56,7 @@ INPUTS_CALCULATION_MODULE = [
      'input_value': 80,
      'input_priority': 1,
      'input_unit': 'm',
-     'input_min': 0,
+     'input_min': 10,
      'input_max': 250,
      'cm_id': CM_ID
      },
@@ -76,7 +76,7 @@ INPUTS_CALCULATION_MODULE = [
      'input_value': 20,
      'input_priority': 1,
      'input_unit': 'year',
-     'input_min': 0.0,
+     'input_min': 1.0,
      'input_max': 40,
      'cm_id': CM_ID
      },
