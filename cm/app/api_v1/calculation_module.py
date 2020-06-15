@@ -22,8 +22,10 @@ from ..constant import CM_NAME
 
 
 # set a logger
-LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
-              '-35s %(lineno) -5d: %(message)s')
+LOG_FORMAT = (
+    "%(levelname) -10s %(asctime)s %(name) -30s %(funcName) "
+    "-35s %(lineno) -5d: %(message)s"
+)
 logging.basicConfig(format=LOG_FORMAT)
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel("DEBUG")
@@ -39,10 +41,12 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
     """
     Run the simulation and get indicators for the single source
     """
-    LOGGER.info("Financial parameters: "
-                f'setup_costs={data_in["setup_costs"]} '
-                f'yearly_cost={data_in["tot_cost_year"]} '
-                f'plant_life={data_in["financing_years"]}')
+    print(
+        "Financial parameters: "
+        f'setup_costs={data_in["setup_costs"]} '
+        f'yearly_cost={data_in["tot_cost_year"]} '
+        f'plant_life={data_in["financing_years"]}'
+    )
     pl.financial = plant.Financial(
         investement_cost=int(data_in["setup_costs"] * pl.peak_power),
         yearly_cost=data_in["tot_cost_year"],
@@ -54,18 +58,20 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
         result["indicator"] = ro.get_indicators(
             kind, pl, most_suitable, n_plant_raster, discount_rate
         )
-        LOGGER.info(f'indicator={json.dumps(result["indicator"])}')
+        print(f'indicator={json.dumps(result["indicator"])}')
 
         # default profile
         tot_profile = pl.prof["electricity"].values * pl.n_plants
         default_profile, unit, con = ru.best_unit(
             tot_profile, "kW", no_data=0, fstat=np.median, powershift=0
         )
-        LOGGER.info("Horuly profile "
-                    f'tot_profile={tot_profile} '
-                    f'default_profile={default_profile} '
-                    f'unit={unit} '
-                    f'con={con}')
+        print(
+            "Horuly profile "
+            f"tot_profile={tot_profile} "
+            f"default_profile={default_profile} "
+            f"unit={unit} "
+            f"con={con}"
+        )
 
         graph = ro.line(
             x=ro.reducelabels(pl.prof.index.strftime("%d-%b %H:%M")),
@@ -83,10 +89,8 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
         monthly_profile, unit, con = ru.best_unit(
             df_month["output"].values, "kWh", no_data=0, fstat=np.median, powershift=0
         )
-        LOGGER.info(f'monthly_profile={monthly_profile} '
-                    f'unit={unit} '
-                    f'con={con}')
-                
+        print(f"monthly_profile={monthly_profile} " f"unit={unit} " f"con={con}")
+
         graph_month = ro.line(
             x=df_month.index.strftime("%b"),
             y_labels=[
@@ -104,7 +108,7 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
         graphics = [graph, graph_month]
 
         result["graphics"] = graphics
-        LOGGER.info("Computed correctly!")
+        print("Computed correctly!")
     return result
 
 
@@ -131,12 +135,12 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
     }
 
     discount_rate = float(inputs_parameter_selection["discount_rate"])
-    LOGGER.info(f"w_in={w_in}")
+    print(f"w_in={w_in}")
 
     # retrieve the inputs layes
     # ds = gdal.Open(inputs_raster_selection["output_wind_speed"])
-    LOGGER.info(f"inputs_raster_selection={inputs_raster_selection}")
-    LOGGER.info(f"inputs_raster_selection.keys()={inputs_raster_selection.keys()}")
+    print(f"inputs_raster_selection={inputs_raster_selection}")
+    print(f"inputs_raster_selection.keys()={inputs_raster_selection.keys()}")
     ds = gdal.Warp(
         "warp_test.tif",
         inputs_raster_selection["output_wind_speed"],
@@ -159,6 +163,7 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
     )
     wind_plant.area = w_in["res_hub"] * w_in["res_hub"]
     wind_plant.n_plants = plant_raster.sum()
+    print(f"wind_plant.n_plants: {wind_plant.n_plants}")
     if wind_plant.n_plants > 0:
         wind_plant.raw = False
         wind_plant.mean = None
@@ -173,13 +178,16 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
                discount_rate,
                )
         """
-        res = run_source(
-            "Wind", wind_plant, w_in, potential, plant_raster, discount_rate
-        )
+        try:
+            res = run_source(
+                "Wind", wind_plant, w_in, potential, plant_raster, discount_rate
+            )
+        except Exception as exc:
+            print(f"FAILED to execute run_source function due to {exc}")
         res["name"] = CM_NAME
     else:
         # TODO: How to manage message
         res = dict()
-        warnings.warn("Not suitable pixels have been identified.")
-    LOGGER.info("Wind computation completed!")
+        print("Not suitable pixels have been identified.")
+    print("Wind computation completed!")
     return res
