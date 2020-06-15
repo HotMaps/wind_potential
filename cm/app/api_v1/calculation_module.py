@@ -186,8 +186,13 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
             print(f"FAILED to execute run_source function due to {exc}")
         res["name"] = CM_NAME
     else:
-        # TODO: How to manage message
-        res = dict()
+        res = dict(
+            indicators=dict(
+                unit="",
+                name="Not suitable pixels have been identified in the area selected, please select another area",
+                value=0,
+            )
+        )
         print("Not suitable pixels have been identified.")
     print("Wind computation completed!")
     return res
