@@ -11,7 +11,7 @@ LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
 LOGGER = logging.getLogger(__name__)
 queue_name =  RPC_Q + str(CM_ID)
-parameters = pika.URLParameters(CELERY_BROKER_URL + "?heartbeat_interval=0")
+parameters = pika.URLParameters(CELERY_BROKER_URL)
 connection = pika.BlockingConnection(parameters)
 
 channel = connection.channel()
@@ -42,6 +42,7 @@ def on_request(ch, method, props, body):
     ch.basic_ack(delivery_tag = method.delivery_tag)
 
 channel.basic_qos(prefetch_count=1)
+print('queue_name',queue_name)
 channel.basic_consume(on_request, queue=queue_name)
 
 print(" [x] Awaiting RPC requests")

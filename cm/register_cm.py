@@ -4,9 +4,8 @@ import logging
 import json
 
 import time
-
-from app.api_v1.transactions import register
 from app.constant import CM_ID
+from app.api_v1.transactions import register
 
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
@@ -21,7 +20,14 @@ def start_runner():
             LOGGER.info('In start loop')
             response = register()
             LOGGER.info('Server not yet started')
-            cm = json.loads(json.loads(response.decode('utf-8')))
+
+            if type(response) is bytes:
+                # if the type is byte we convert the response to STR
+                response = response.decode('utf-8')
+
+            cm = json.loads(response)
+            print (' response', cm)
+
             cm_id = cm["cm_id"]
             if str(CM_ID) == str(cm_id) :
                 LOGGER.info('Server started, quiting start_loop')
@@ -37,6 +43,8 @@ def start_runner():
 
 if __name__ == '__main__':
     start_runner()
+
+
 
 
 

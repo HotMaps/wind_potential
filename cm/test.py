@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-import unittest
 import os
+import unittest
 import sys
 import coverage
 
 from tests import suite
+
 
 COV = coverage.coverage(
     data_file=os.path.join(os.path.dirname(__file__), ".coverage"),

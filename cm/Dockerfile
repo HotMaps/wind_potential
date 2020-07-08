@@ -1,6 +1,5 @@
 FROM hotmaps/base_cm:latest
 
-
 # Setup app server
 WORKDIR /
 RUN mkdir -p /data
