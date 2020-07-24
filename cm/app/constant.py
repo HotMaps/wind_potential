@@ -93,7 +93,7 @@ INPUTS_CALCULATION_MODULE = [
      }
 ]
 
-WIKIURL = os.environ.get("WIKIURL", "https://wiki.hotmaps.hevs.ch/en/")
+WIKIURL = os.environ.get("WIKIURL", "https://wiki.hotmaps.eu/en/")
 
 SIGNATURE = {
     "category": "Supply",
@@ -106,11 +106,10 @@ SIGNATURE = {
         "description": "Availale areas that are suitable to install a wind turbine"}
     ],
     "cm_url": "Do not add something",
-    "cm_description": "This computation aims to compute the wind"
-                      "energy potential and the financial feasibility of"
-                      "a selected area."
-                      "The code is on Hotmaps Github group and has"
-                      " been developed by EURAC",
+    "cm_description": "This calculation module aims to compute the wind "
+                      "energy potential and the system financial feasibility in "
+                      "a selected area. "
+                      "The code been developed by EURAC.",
     "cm_id": CM_ID,
     "wiki_url": WIKIURL + "CM-Wind-potential",
     'inputs_calculation_module': INPUTS_CALCULATION_MODULE
