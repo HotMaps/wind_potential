@@ -37,7 +37,7 @@ if "RES_NINJA_TOKENS" not in os.environ:
     LOGGER.warning("RES_NINJA_TOKENS environmental variable not set!")
 
 
-def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
+def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate, result):
     """
     Run the simulation and get indicators for the single source
     """
@@ -53,62 +53,71 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate):
         plant_life=data_in["financing_years"],
     )
 
-    result = dict()
+    pl.prof = None
+
     if most_suitable.max() > 0:
-        result["indicator"] = ro.get_indicators(
-            kind, pl, most_suitable, n_plant_raster, discount_rate
+        result["indicator"].extend(
+            ro.get_indicators(kind, pl, most_suitable, n_plant_raster, discount_rate)
         )
         print(f'indicator={json.dumps(result["indicator"])}')
 
-        # default profile
-        tot_profile = pl.prof["electricity"].values * pl.n_plants
-        default_profile, unit, con = ru.best_unit(
-            tot_profile, "kW", no_data=0, fstat=np.median, powershift=0
-        )
-        print(
-            "Horuly profile "
-            f"tot_profile={tot_profile} "
-            f"default_profile={default_profile} "
-            f"unit={unit} "
-            f"con={con}"
-        )
+        if pl.prof is not None:
+            # default profile
+            tot_profile = pl.prof["electricity"].values * pl.n_plants
+            default_profile, unit, con = ru.best_unit(
+                tot_profile, "kW", no_data=0, fstat=np.median, powershift=0
+            )
+            print(
+                "Horuly profile "
+                f"tot_profile={tot_profile} "
+                f"default_profile={default_profile} "
+                f"unit={unit} "
+                f"con={con}"
+            )
 
-        graph = ro.line(
-            x=ro.reducelabels(pl.prof.index.strftime("%d-%b %H:%M")),
-            y_labels=["{} {} profile [{}]".format(kind, pl.resolution[1], unit)],
-            y_values=[default_profile],
-            unit=unit,
-            xLabel=pl.resolution[0],
-            yLabel="{} {} profile [{}]".format(kind, pl.resolution[1], unit),
-        )
+            graph = ro.line(
+                x=ro.reducelabels(pl.prof.index.strftime("%d-%b %H:%M")),
+                y_labels=["{} {} profile [{}]".format(kind, pl.resolution[1], unit)],
+                y_values=[default_profile],
+                unit=unit,
+                xLabel=pl.resolution[0],
+                yLabel="{} {} profile [{}]".format(kind, pl.resolution[1], unit),
+            )
 
-        # monthly profile of energy production
+            # monthly profile of energy production
 
-        df_month = pl.prof.groupby(pd.Grouper(freq="M")).sum()
-        df_month["output"] = df_month["electricity"] * pl.n_plants
-        monthly_profile, unit, con = ru.best_unit(
-            df_month["output"].values, "kWh", no_data=0, fstat=np.median, powershift=0
-        )
-        print(f"monthly_profile={monthly_profile} " f"unit={unit} " f"con={con}")
+            df_month = pl.prof.groupby(pd.Grouper(freq="M")).sum()
+            df_month["output"] = df_month["electricity"] * pl.n_plants
+            monthly_profile, unit, con = ru.best_unit(
+                df_month["output"].values,
+                "kWh",
+                no_data=0,
+                fstat=np.median,
+                powershift=0,
+            )
+            print(f"monthly_profile={monthly_profile} " f"unit={unit} " f"con={con}")
 
-        graph_month = ro.line(
-            x=df_month.index.strftime("%b"),
-            y_labels=[
-                """"{} monthly energy
-                                        production [{}]""".format(
-                    kind, unit
-                )
-            ],
-            y_values=[monthly_profile],
-            unit=unit,
-            xLabel="Months",
-            yLabel="{} monthly profile [{}]".format(kind, unit),
-        )
+            graph_month = ro.line(
+                x=df_month.index.strftime("%b"),
+                y_labels=[
+                    """"{} monthly energy
+                                            production [{}]""".format(
+                        kind, unit
+                    )
+                ],
+                y_values=[monthly_profile],
+                unit=unit,
+                xLabel="Months",
+                yLabel="{} monthly profile [{}]".format(kind, unit),
+            )
 
-        graphics = [graph, graph_month]
+            graphics = [graph, graph_month]
+        else:
+            graphics = []
 
         result["graphics"] = graphics
         print("Computed correctly!")
+        print(result)
     return result
 
 
@@ -119,6 +128,10 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
     # list of error messages
     # TODO: to be fixed according to CREM format
     messages = []
+    res = {}
+    res["name"] = CM_NAME
+    res["graphics"] = []
+    res["indicator"] = []
 
     # retrieve the inputs all input defined in the signature
     w_in = {
@@ -168,33 +181,51 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
         wind_plant.raw = False
         wind_plant.mean = None
         wind_plant.lat, wind_plant.lon = rr.get_lat_long(ds, potential)
-        wind_plant.prof = wind_plant.profile()
-        wind_plant.energy_production = wind_plant.prof.sum()["electricity"]
-        wind_plant.resolution = ["Hours", "hourly"]
-        """
-        run_source(kind, pl, data_in,
-               most_suitable,
-               n_plant_raster,
-               discount_rate,
-               )
-        """
         try:
-            res = run_source(
-                "Wind", wind_plant, w_in, potential, plant_raster, discount_rate
+            wind_plant.prof = wind_plant.profile()
+            wind_plant.energy_production = wind_plant.prof.sum()["electricity"]
+
+            wind_plant.resolution = ["Hours", "hourly"]
+            """
+            run_source(kind, pl, data_in,
+                   most_suitable,
+                   n_plant_raster,
+                   discount_rate,
+                   )
+            """
+            try:
+                res = run_source(
+                    "Wind",
+                    wind_plant,
+                    w_in,
+                    potential,
+                    plant_raster,
+                    discount_rate,
+                    res,
+                )
+            except Exception as exc:
+                print(f"FAILED to execute run_source function due to {exc}")
+        except Exception:
+            messages.append(
+                (
+                    "Not able to reach the RenewableNinja website to retrieve the hourly values",
+                    "-",
+                    "-",
+                )
             )
-        except Exception as exc:
-            print(f"FAILED to execute run_source function due to {exc}")
     else:
-        res = dict(
-            indicator=[
-                dict(
-                    unit="",
-                    name="Not suitable pixels have been identified in the area selected, please select another area",
-                    value=0,
-                ),
-            ]
+        res["indicator"].append(
+            dict(
+                unit="",
+                name="Not suitable pixels have been identified in the area selected, please select another area",
+                value=0,
+            ),
         )
         print("Not suitable pixels have been identified.")
-    res["name"] = CM_NAME
+
+    for msgtxt, msgval, msgunt in messages:
+        res["indicator"].append(
+            {"unit": msgunt, "name": "WARNING: " + msgtxt, "value": msgval}
+        )
     print("Wind computation completed")
     return res
