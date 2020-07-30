@@ -21,7 +21,7 @@ TRANFER_PROTOCOLE = "http://"
 
 
 INPUTS_CALCULATION_MODULE = [
-    {'input_name': 'Wind Hub Setup costs (all inclusive) price [Euro/kWp]',
+    {'input_name': 'Wind hub setup costs (all inclusive) price [euro/kWp]',
      'input_type': 'input',
      'input_parameter_name': 'setup_costs',
      'input_value': 2000,
