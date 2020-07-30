@@ -19,5 +19,5 @@ six==1.14.0
 pandas
 
 git+https://github.com/HotMaps/reslib.git
-git+https://github.com/HotMaps/resutils.git
+git+https://github.com/HotMaps/resutils.git 
 
