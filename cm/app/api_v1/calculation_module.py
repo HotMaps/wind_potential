@@ -53,8 +53,6 @@ def run_source(kind, pl, data_in, most_suitable, n_plant_raster, discount_rate, 
         plant_life=data_in["financing_years"],
     )
 
-    pl.prof = None
-
     if most_suitable.max() > 0:
         result["indicator"].extend(
             ro.get_indicators(kind, pl, most_suitable, n_plant_raster, discount_rate)
@@ -176,6 +174,7 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
     )
     wind_plant.area = w_in["res_hub"] * w_in["res_hub"]
     wind_plant.n_plants = plant_raster.sum()
+    wind_plant.prof = None
     print(f"wind_plant.n_plants: {wind_plant.n_plants}")
     if wind_plant.n_plants > 0:
         wind_plant.raw = False
