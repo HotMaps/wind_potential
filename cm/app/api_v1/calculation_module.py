@@ -1,3 +1,4 @@
+import datetime
 import logging
 import json
 import os
@@ -123,6 +124,11 @@ def calculation(output_directory, inputs_raster_selection, inputs_parameter_sele
     """
     Main function
     """
+    now = datetime.datetime.now()
+    data = dict(output_directory=output_directory, inputs_raster_selection=inputs_raster_selection, inputs_parameter_selection=inputs_parameter_selection)
+    with open(f"/tmp/req_wind_{now:%y-%m-%d_%H%M%S}.json", "w") as jsn:
+        json.dump(data, jsn)
+        
     # list of error messages
     # TODO: to be fixed according to CREM format
     messages = []
