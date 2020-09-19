@@ -18,6 +18,7 @@ requests>=2.20.0
 six==1.14.0
 pandas
 
+# take the latest development version
 git+https://github.com/HotMaps/reslib.git
-git+https://github.com/HotMaps/resutils.git 
+git+https://github.com/HotMaps/resutils.git  
 
